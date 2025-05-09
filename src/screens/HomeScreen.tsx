@@ -59,6 +59,14 @@ const friends = [
 
 const inspirations = ['Spring Lunches 🥗', '3-Ingredient Dinners 🍋', 'High-Protein Snacks 💪', 'Make-Ahead Meals ⏱️']
 
+const seasonalIdeas = [
+  { id: '1', title: 'Spring Dinners 🌱' },
+  { id: '2', title: 'Back-to-School Snacks 🎒' },
+  { id: '3', title: 'Hearty Bowls 🥣' },
+  { id: '4', title: 'Quick No-Bake Treats ❄️' }
+]
+
+
 
 export default function HomeScreen() {
 
@@ -118,6 +126,17 @@ export default function HomeScreen() {
             )}
           />
         </View>
+        <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Our Picks This Week</Text>
+        <View style={styles.seasonalGrid}>
+          {seasonalIdeas.map((item) => (
+            <View key={item.id} style={styles.seasonalCard}>
+              <Text style={styles.seasonalText}>{item.title}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
         <View style={styles.section}>
         <Text style={styles.sectionTitle}>What Can You Make?</Text>
         <Text style={styles.subtext}>Enter a few ingredients you have on hand:</Text>
@@ -345,5 +364,29 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#1B9A77', // deeper mint or pine green
     fontWeight: '500'
-  }       
+  },
+  seasonalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12
+  },
+  seasonalCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    width: '48%',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 12
+  },
+  seasonalText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center'
+  }         
 })
