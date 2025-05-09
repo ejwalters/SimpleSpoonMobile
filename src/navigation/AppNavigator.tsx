@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import HomeScreen from '../screens/HomeScreen'
 import MyRecipesScreen from '../screens/MyRecipesScreen'
-import CookScreen from '../screens/CookScreen'
+import InspireScreen from '../screens/InspireScreen'
 import CreateScreen from '../screens/CreateScreen'
 import ProfileScreen from '../screens/ProfileScreen'
 import RecipeDetailScreen from '../screens/RecipeDetailScreen'
@@ -16,7 +16,7 @@ import RecipeDetailScreen from '../screens/RecipeDetailScreen'
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
 
-const CookButton = ({ children, onPress }) => (
+const InspireButton = ({ children, onPress }) => (
   <TouchableOpacity onPress={onPress} style={cookStyles.buttonContainer}>
     <View style={cookStyles.button}>{children}</View>
   </TouchableOpacity>
@@ -55,7 +55,7 @@ function MainTabs() {
             case 'MyRecipes':
               iconName = focused ? 'book' : 'book-outline'
               break
-            case 'Cook':
+            case 'Inspire':
               iconName = focused ? 'flame' : 'flame-outline'
               iconSize = 36
               break
@@ -74,7 +74,7 @@ function MainTabs() {
               color={iconColor}
               style={{
                 alignSelf: 'center',
-                marginTop: route.name === 'Cook' ? -8 : 0
+                marginTop: route.name === 'Inspire' ? -8 : 0
               }}
             />
           )
@@ -84,10 +84,10 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="MyRecipes" component={MyRecipesScreen} />
       <Tab.Screen
-        name="Cook"
-        component={CookScreen}
+        name="Inspire"
+        component={InspireScreen}
         options={{
-          tabBarButton: (props) => <CookButton {...props} />,
+          tabBarButton: (props) => <InspireButton {...props} />,
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'flame' : 'flame-outline'}
