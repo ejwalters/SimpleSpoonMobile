@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Animated
+  Animated,
+  ScrollView
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
@@ -43,9 +44,17 @@ export default function InspireScreen({ navigation }) {
       onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
     >
       <Text style={styles.cardTitle}>{item.title}</Text>
-      <View style={styles.tagPill}>
-        <Text style={styles.tagText}>{item.tag || 'AI Inspired'}</Text>
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexDirection: 'row', gap: 8 }}
+      >
+        {(item.tag || []).map((tag, idx) => (
+          <View key={idx} style={styles.tagPill}>
+            <Text style={styles.tagText}>{tag}</Text>
+          </View>
+        ))}
+      </ScrollView>
       <Text style={styles.cardHighlight}>{item.highlight}</Text>
     </TouchableOpacity>
   )

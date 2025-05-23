@@ -18,7 +18,6 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     const { error } = await supabase.auth.signIn({ email, password })
     if (error) Alert.alert('Login failed', error.message)
-    else navigation.replace('Home')
   }
 
   return (

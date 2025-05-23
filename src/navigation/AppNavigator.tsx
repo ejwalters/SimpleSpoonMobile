@@ -1,20 +1,24 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { NavigationContainer } from '@react-navigation/native'
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native'
+import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import Ionicons from 'react-native-vector-icons/Ionicons'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { supabase } from '../services/supabaseClient'
 
+// Screens
 import HomeScreen from '../screens/HomeScreen'
 import MyRecipesScreen from '../screens/MyRecipesScreen'
 import InspireScreen from '../screens/InspireScreen'
 import CreateScreen from '../screens/CreateScreen'
 import ProfileScreen from '../screens/ProfileScreen'
 import RecipeDetailScreen from '../screens/RecipeDetailScreen'
+import LoginScreen from '../screens/Auth/LoginScreen'
+import SignupScreen from '../screens/Auth/SignupScreen'
 
 const Tab = createBottomTabNavigator()
-const Stack = createNativeStackNavigator()
+const AppStack = createNativeStackNavigator()
+const AuthStack = createNativeStackNavigator()
 
 const InspireButton = ({ children, onPress }) => (
   <TouchableOpacity onPress={onPress} style={cookStyles.buttonContainer}>
@@ -103,59 +107,46 @@ function MainTabs() {
   )
 }
 
-export default function AppNavigator() {
+function AppStackScreen() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="RecipeDetail"
-          component={RecipeDetailScreen}
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AppStack.Navigator>
+      <AppStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+      <AppStack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ headerShown: false }} />
+    </AppStack.Navigator>
   )
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    height: 70,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
-    paddingHorizontal: 16
-  },
-  centerIcon: {
-    marginTop: -10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4
-  },
-  tabBarBase: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    backgroundColor: '#FFFFFF',
-    zIndex: -1
-  }
-})
+function AuthStackScreen() {
+  return (
+    <AuthStack.Navigator>
+      <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <AuthStack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
+    </AuthStack.Navigator>
+  )
+}
+
+export default function AppNavigator() {
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    const session = supabase.auth.session();
+    setUser(session?.user ?? null);
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      listener?.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <NavigationContainer>
+      {user ? <AppStackScreen /> : <AuthStackScreen />}
+    </NavigationContainer>
+  )
+}
 
 const cookStyles = StyleSheet.create({
   buttonContainer: {
