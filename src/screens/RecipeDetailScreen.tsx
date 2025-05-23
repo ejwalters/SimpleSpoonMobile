@@ -22,6 +22,8 @@ export default function RecipeDetailScreen({ route, navigation }) {
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiResponse, setAiResponse] = useState('')
 
+  console.log(recipe);
+
   const handleAIQuestion = async () => {
     if (!aiQuestion.trim()) return;
   
@@ -58,7 +60,21 @@ export default function RecipeDetailScreen({ route, navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <View style={styles.imageContainer}>
-          <Image source={recipe.image} style={styles.image} />
+          {recipe.image?.uri ? (
+            <Image source={recipe.image} style={styles.image} />
+          ) : (
+            <LinearGradient
+              colors={['#FFD6E8', '#FFF5F7']}
+              style={styles.image}
+            >
+              <View style={styles.placeholderContent}>
+                <Ionicons name="restaurant-outline" size={64} color="#FF5C8A" />
+                <Text style={styles.placeholderText}>
+                  {recipe.title?.split(' ').map(w => w[0]).join('').toUpperCase() || '🍽️'}
+                </Text>
+              </View>
+            </LinearGradient>
+          )}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.35)']}
             style={styles.imageGradient}
@@ -213,7 +229,8 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
-    marginBottom: 8
+    marginBottom: 8,
+    textAlign: 'center'
   },
   tagPill: {
     backgroundColor: '#FF5C8A99',
@@ -304,5 +321,17 @@ const styles = StyleSheet.create({
   aiResponseText: {
     fontSize: 14,
     color: '#444'
+  },
+  placeholderContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  placeholderText: {
+    marginTop: 8,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FF5C8A',
+    letterSpacing: 2
   }
 })

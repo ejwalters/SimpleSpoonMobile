@@ -18,20 +18,77 @@ const myRecipes = [
   {
     id: '1',
     title: 'Banana Oat Pancakes',
-    image: { uri: 'https://www.ambitiouskitchen.com/wp-content/uploads/2019/04/bananaoatmealpancakes-6-1064x1064.jpg' },
-    tag: 'Breakfast'
+    tag: 'Breakfast',
+    highlight: 'Fluffy, naturally sweet pancakes made with ripe bananas and hearty oats.',
+    ingredients: [
+      '2 ripe bananas',
+      '1 cup rolled oats',
+      '2 eggs',
+      '1/2 tsp baking powder',
+      '1/2 tsp cinnamon',
+      '1/4 tsp salt',
+      '1/2 tsp vanilla extract',
+      'Butter or oil for cooking'
+    ],
+    instructions: [
+      'Blend bananas, oats, eggs, baking powder, cinnamon, salt, and vanilla until smooth.',
+      'Heat a lightly oiled skillet over medium heat.',
+      'Pour batter onto the skillet and cook for 2–3 minutes until bubbles form.',
+      'Flip and cook for another 1–2 minutes until golden.',
+      'Serve warm with fresh fruit or maple syrup.'
+    ],
+    image: {
+      uri: 'https://www.ambitiouskitchen.com/wp-content/uploads/2019/04/bananaoatmealpancakes-6-1064x1064.jpg'
+    }
   },
   {
     id: '2',
     title: 'Avocado Chicken Salad',
-    image: { uri: 'https://www.simplyrecipes.com/thmb/Jjz-656DUltc_dL2RPd6JzC7vII=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2015__09__avocado-chicken-salad-horiz-a-1500-19fe81af6205417e9ffcaf2c72b0b7b6.jpg' },
-    tag: 'Lunch'
+    tag: 'Lunch',
+    highlight: 'A creamy, refreshing chicken salad made with ripe avocado instead of mayo.',
+    ingredients: [
+      '2 cups cooked shredded chicken',
+      '1 ripe avocado',
+      '1 tbsp lime juice',
+      '1/4 cup chopped red onion',
+      '1/4 cup chopped cilantro',
+      '1/2 cup diced cucumber',
+      'Salt and pepper to taste'
+    ],
+    instructions: [
+      'In a large bowl, mash the avocado with lime juice until creamy.',
+      'Add the shredded chicken, red onion, cilantro, and cucumber.',
+      'Season with salt and pepper to taste.',
+      'Mix everything until evenly coated.',
+      'Serve in lettuce cups, on toast, or with crackers.'
+    ],
+    image: {
+      uri: 'https://www.simplyrecipes.com/thmb/Jjz-656DUltc_dL2RPd6JzC7vII=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2015__09__avocado-chicken-salad-horiz-a-1500-19fe81af6205417e9ffcaf2c72b0b7b6.jpg'
+    }
   },
   {
     id: '3',
     title: 'Peanut Butter Chia Bars',
-    image: { uri: 'https://www.wellplated.com/wp-content/uploads/2015/08/The-best-healthy-granola-bar-recipe-No-Bake-Chia-Bars-made-with-peanut-butter-and-honey.jpg' },
-    tag: 'Snack'
+    tag: 'Snack',
+    highlight: 'No-bake bars packed with peanut butter, chia seeds, and natural sweetness.',
+    ingredients: [
+      '1 cup natural peanut butter',
+      '1/3 cup honey or maple syrup',
+      '1 tsp vanilla extract',
+      '1/4 cup chia seeds',
+      '1 1/2 cups rolled oats',
+      'Pinch of salt'
+    ],
+    instructions: [
+      'In a saucepan, warm peanut butter and honey over low heat until smooth.',
+      'Remove from heat and stir in vanilla and salt.',
+      'Mix in chia seeds and oats until fully combined.',
+      'Press mixture into a parchment-lined 8x8 pan.',
+      'Refrigerate for at least 1 hour, then cut into bars and store chilled.'
+    ],
+    image: {
+      uri: 'https://www.wellplated.com/wp-content/uploads/2015/08/The-best-healthy-granola-bar-recipe-No-Bake-Chia-Bars-made-with-peanut-butter-and-honey.jpg'
+    }
   }
 ]
 
