@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View,
   Text,
@@ -18,7 +19,6 @@ import { supabase } from '../services/supabaseClient'
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 export default function RecipeDetailScreen({ route, navigation }) {
-  // Extract recipe data from route params
   const { recipe } = route.params
   const insets = useSafeAreaInsets()
   const [aiQuestion, setAiQuestion] = useState('')
@@ -26,14 +26,37 @@ export default function RecipeDetailScreen({ route, navigation }) {
   const [userId, setUserId] = useState(null)
   const [showSaveTooltip, setShowSaveTooltip] = useState(false)
   const [showFavoriteTooltip, setShowFavoriteTooltip] = useState(false)
+  const [isFavorited, setIsFavorited] = useState(false)
 
-  // Fetch current logged in user
   useEffect(() => {
     const user = supabase.auth.user()
     if (user) setUserId(user.id)
   }, [])
 
-  // Ask the AI chef a question based on the current recipe
+  // Check if recipe is already favorited by user when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!userId || !recipe?.id) return;
+
+      const checkFavoriteStatus = async () => {
+        try {
+          const res = await fetch('http://localhost:3001/favorite-recipe-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, recipe_id: recipe.id })
+          });
+
+          const data = await res.json();
+          setIsFavorited(!!data.isFavorited);
+        } catch (err) {
+          console.error('Error checking favorite status:', err);
+        }
+      };
+
+      checkFavoriteStatus();
+    }, [userId, recipe?.id])
+  );
+
   const handleAIQuestion = async () => {
     if (!aiQuestion.trim()) return
 
@@ -53,7 +76,6 @@ export default function RecipeDetailScreen({ route, navigation }) {
           recipe: recipeData
         })
       })
-
       const data = await res.json()
       setAiResponse(data.answer || 'Sorry, something went wrong.')
     } catch (err) {
@@ -62,36 +84,46 @@ export default function RecipeDetailScreen({ route, navigation }) {
     }
   }
 
-  // Determine if this recipe belongs to the current user or is AI-suggested
   const isOwner = recipe.user_id && userId && recipe.user_id === userId
   const isAISuggestion = !recipe.user_id
 
-  // Save recipe to user's collection
   const handleSaveRecipe = async () => {
     try {
       const res = await fetch('http://localhost:3001/save-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipe: {
-            ...recipe,
-            user_id: userId
-          }
-        })
+        body: JSON.stringify({ recipe: { ...recipe, user_id: userId } })
       })
       const data = await res.json()
-      if (data.success) {
-        alert('Recipe saved!')
-      } else {
-        alert('Failed to save recipe.')
-      }
+      if (data.success) alert('Recipe saved!')
+      else alert('Failed to save recipe.')
     } catch (err) {
       alert('Error saving recipe.')
     }
   }
 
-  const handleFavorite = () => {
-    // Placeholder: Add logic for favoriting a recipe
+  const handleFavorite = async () => {
+    if (!userId || !recipe.id) return;
+
+    try {
+      const endpoint = '/favorite-recipe';
+      const method = isFavorited ? 'DELETE' : 'POST';
+
+      const res = await fetch(`http://localhost:3001${endpoint}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, recipe_id: recipe.id })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsFavorited(!isFavorited);
+      } else {
+        alert('Failed to update favorite status.');
+      }
+    } catch (err) {
+      alert('Error updating favorite.');
+    }
   }
 
   return (
@@ -122,7 +154,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
               onPress={handleFavorite}
               onLongPress={() => setShowFavoriteTooltip(true)}
             >
-              <Ionicons name="heart-outline" size={26} color="#FF5C8A" />
+              <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={26} color="#FF5C8A" />
             </TouchableOpacity>
           </View>
 
@@ -147,10 +179,13 @@ export default function RecipeDetailScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* Save to My Recipes button for AI-suggested or shared recipes */}
         {(!isOwner || isAISuggestion) && userId && (
           <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 0 }}>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecipe} onLongPress={() => setShowSaveTooltip(true)}>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleSaveRecipe}
+              onLongPress={() => setShowSaveTooltip(true)}
+            >
               <Ionicons name="bookmark-outline" size={22} color="#fff" />
               <Text style={styles.saveButtonText}>Save to My Recipes</Text>
             </TouchableOpacity>
@@ -166,7 +201,6 @@ export default function RecipeDetailScreen({ route, navigation }) {
         )}
 
         <View style={styles.detailsSection}>
-          {/* Ingredients List */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>🧾 Ingredients</Text>
             <View style={styles.ingredientGrid}>
@@ -176,7 +210,6 @@ export default function RecipeDetailScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Nutrition Info (if available) */}
           {recipe.nutrition_info && (
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>🍎 Nutritional Info</Text>
@@ -193,7 +226,6 @@ export default function RecipeDetailScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Instructions */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>👩‍🍳 Instructions</Text>
             <View style={styles.stepBox}>
@@ -203,7 +235,6 @@ export default function RecipeDetailScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Ask the AI Chef */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>🧠 Ask the AI Chef</Text>
             <Text style={styles.aiHelperText}>Need substitutions or have a question?</Text>

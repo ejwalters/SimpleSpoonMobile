@@ -15,6 +15,7 @@ import ProfileScreen from '../screens/ProfileScreen'
 import RecipeDetailScreen from '../screens/RecipeDetailScreen'
 import LoginScreen from '../screens/Auth/LoginScreen'
 import SignupScreen from '../screens/Auth/SignupScreen'
+import FavoritesScreen from '../screens/FavoritesScreen'
 
 const Tab = createBottomTabNavigator()
 const AppStack = createNativeStackNavigator()
@@ -66,8 +67,8 @@ function MainTabs() {
               iconName = focused ? 'flame' : 'flame-outline'
               iconSize = 36
               break
-            case 'Create':
-              iconName = focused ? 'add-circle' : 'add-circle-outline'
+            case 'Favorites':
+              iconName = focused ? 'heart' : 'heart-outline'
               break
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline'
@@ -104,7 +105,7 @@ function MainTabs() {
           )
         }}
       />
-      <Tab.Screen name="Create" component={CreateScreen} />
+      <Tab.Screen name="Favorites" component={FavoritesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )
