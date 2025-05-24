@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ScrollView
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../services/supabaseClient'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 
@@ -31,33 +31,37 @@ export default function MyRecipesScreen() {
     return () => clearTimeout(handler)
   }, [search])
 
-  // Retrieve user ID from Supabase
+  // Move fetchRecipes into a useCallback
+  const fetchRecipes = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ user_id: userId })
+      if (debouncedSearch) params.append('search', debouncedSearch)
+      if (selectedFilter !== 'All') params.append('tag', selectedFilter)
+
+      const res = await fetch(`http://localhost:3001/api/recipes?${params.toString()}`)
+      const data = await res.json()
+      setRecipes(data.recipes || [])
+    } catch (err) {
+      setRecipes([])
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, debouncedSearch, selectedFilter])
+
+  // Add useFocusEffect to refresh recipes when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchRecipes()
+    }, [fetchRecipes])
+  )
+
+  // Remove the old useEffect for fetching recipes since we're using useFocusEffect now
   useEffect(() => {
     const user = supabase.auth.user()
     if (user) setUserId(user.id)
   }, [])
-
-  // Fetch recipes whenever the userId, search term, or filter changes
-  useEffect(() => {
-    if (!userId) return
-    setLoading(true)
-    const fetchRecipes = async () => {
-      try {
-        const params = new URLSearchParams({ user_id: userId })
-        if (debouncedSearch) params.append('search', debouncedSearch)
-        if (selectedFilter !== 'All') params.append('tag', selectedFilter)
-
-        const res = await fetch(`http://localhost:3001/api/recipes?${params.toString()}`)
-        const data = await res.json()
-        setRecipes(data.recipes || [])
-      } catch (err) {
-        setRecipes([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchRecipes()
-  }, [userId, debouncedSearch, selectedFilter])
 
   const renderItem = ({ item }) => {
     if (item.id === 'spacer') {

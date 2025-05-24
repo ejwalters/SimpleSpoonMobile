@@ -149,13 +149,15 @@ export default function RecipeDetailScreen({ route, navigation }) {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={28} color="#FF5C8A" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.favoriteButton}
-              onPress={handleFavorite}
-              onLongPress={() => setShowFavoriteTooltip(true)}
-            >
-              <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={26} color="#FF5C8A" />
-            </TouchableOpacity>
+            {recipe.id && userId && (
+              <TouchableOpacity
+                style={styles.favoriteButton}
+                onPress={handleFavorite}
+                onLongPress={() => setShowFavoriteTooltip(true)}
+              >
+                <Ionicons name={isFavorited ? 'heart' : 'heart-outline'} size={26} color="#FF5C8A" />
+              </TouchableOpacity>
+            )}
           </View>
 
           {showFavoriteTooltip && (
