@@ -16,6 +16,7 @@ import RecipeDetailScreen from '../screens/RecipeDetailScreen'
 import LoginScreen from '../screens/Auth/LoginScreen'
 import SignupScreen from '../screens/Auth/SignupScreen'
 import FavoritesScreen from '../screens/FavoritesScreen'
+import CreateRecipeScreen from '../screens/CreateRecipeScreen'
 
 const Tab = createBottomTabNavigator()
 const AppStack = createNativeStackNavigator()
@@ -117,6 +118,7 @@ function AppStackScreen() {
     <AppStack.Navigator>
       <AppStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <AppStack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ headerShown: false }} />
+      <AppStack.Screen name="CreateRecipe" component={CreateRecipeScreen} options={{ headerShown: false }} />
     </AppStack.Navigator>
   )
 }

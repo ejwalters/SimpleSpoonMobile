@@ -91,8 +91,26 @@ export default function MyRecipesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <Text style={styles.heading}>My Recipes ({recipes.length})</Text>
+    <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <Text style={styles.heading}>My Recipes ({recipes.length})</Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#FF5C8A',
+            borderRadius: 20,
+            padding: 8,
+            marginLeft: 8,
+            shadowColor: '#000',
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+          onPress={() => navigation.navigate('CreateRecipe')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={22} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
       {/* Search bar input */}
       <TextInput
@@ -155,7 +173,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5F7',
     paddingHorizontal: 20,
-    paddingTop: 16
+    paddingTop: 16,
+    position: 'relative',
   },
   heading: {
     fontSize: 24,
@@ -282,5 +301,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FF5C8A',
     letterSpacing: 2
-  }
+  },
 })
