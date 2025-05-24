@@ -80,22 +80,6 @@ export default function MyRecipesScreen() {
         )}
         <View style={styles.cardBody}>
           <Text style={styles.title}>{item.title}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}>
-            {Array.isArray(item.tag) && item.tag.slice(0, 2).map((tag, idx) => (
-              <View key={idx} style={styles.tagPill}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-            {Array.isArray(item.tag) && item.tag.length > 2 && (
-              <TouchableOpacity
-                style={[styles.tagPill, styles.moreTagPill]}
-                onPress={() => {/* Show modal or tooltip with all tags if desired */}}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.tagText}>+{item.tag.length - 2}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
         </View>
       </TouchableOpacity>
     )
