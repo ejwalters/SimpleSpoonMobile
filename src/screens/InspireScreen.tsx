@@ -13,11 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 
+// InspireScreen: Allows user to prompt AI for recipe inspiration based on input text
 export default function InspireScreen({ navigation }) {
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [recipes, setRecipes] = useState([])
+  const [input, setInput] = useState('')              // User input prompt
+  const [loading, setLoading] = useState(false)       // Loading state for fetch
+  const [recipes, setRecipes] = useState([])          // Array of AI-generated recipe cards
 
+  // Fetch recipes from backend using input as prompt
   const handleGetInspiration = async () => {
     if (!input.trim()) return
     setLoading(true)
@@ -38,12 +40,15 @@ export default function InspireScreen({ navigation }) {
     }
   }
 
+  // Render a single AI-generated recipe card
   const renderRecipe = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
     >
       <Text style={styles.cardTitle}>{item.title}</Text>
+
+      {/* Tags display */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -55,6 +60,7 @@ export default function InspireScreen({ navigation }) {
           </View>
         ))}
       </ScrollView>
+
       <Text style={styles.cardHighlight}>{item.highlight}</Text>
     </TouchableOpacity>
   )
@@ -65,6 +71,7 @@ export default function InspireScreen({ navigation }) {
         <Text style={styles.text}>🍳 What should we make?</Text>
         <Text style={styles.subtext}>Ask for ideas, ingredients to use, or meal types.</Text>
 
+        {/* Prompt input with icon button */}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
@@ -78,6 +85,7 @@ export default function InspireScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Loader or recipe results */}
         {loading ? (
           <ActivityIndicator size="large" color="#FF5C8A" style={{ marginTop: 30 }} />
         ) : (
@@ -93,6 +101,7 @@ export default function InspireScreen({ navigation }) {
   )
 }
 
+// Style definitions
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

@@ -1,0 +1,33 @@
+.
+├── App.tsx
+├── app.json
+├── index.js
+├── metro.config.js
+├── package-lock.json
+├── package.json
+├── project-tree.txt
+├── src
+│   ├── assets
+│   ├── components
+│   ├── constants
+│   ├── hooks
+│   ├── navigation
+│   │   └── AppNavigator.tsx
+│   ├── screens
+│   │   ├── Auth
+│   │   │   ├── LoginScreen.tsx
+│   │   │   └── SignupScreen.tsx
+│   │   ├── CreateScreen.tsx
+│   │   ├── HomeScreen.tsx
+│   │   ├── InspireScreen.tsx
+│   │   ├── MyRecipesScreen.tsx
+│   │   ├── ProfileScreen.tsx
+│   │   └── RecipeDetailScreen.tsx
+│   ├── services
+│   │   └── supabaseClient.ts
+│   ├── store
+│   └── utils
+├── tsconfig.json
+└── yarn.lock
+
+12 directories, 19 files

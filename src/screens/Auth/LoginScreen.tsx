@@ -12,27 +12,35 @@ import {
 import { supabase } from '../../services/supabaseClient'
 
 export default function LoginScreen({ navigation }) {
+  // Local state for controlled inputs
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // Handles login using Supabase auth
   const handleLogin = async () => {
     const { error } = await supabase.auth.signIn({ email, password })
+
+    // Show alert if login fails
     if (error) Alert.alert('Login failed', error.message)
   }
 
   return (
+    // Avoids keyboard covering input fields on iOS
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Greeting section at top */}
       <View style={styles.topSection}>
         <Text style={styles.welcome}>👋 Welcome back</Text>
         <Text style={styles.subtitle}>Let's get you cooking again.</Text>
       </View>
 
+      {/* Card-like login form container */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Log In</Text>
 
+        {/* Email input */}
         <TextInput
           placeholder="Email"
           placeholderTextColor="#888"
@@ -41,6 +49,8 @@ export default function LoginScreen({ navigation }) {
           autoCapitalize="none"
           keyboardType="email-address"
         />
+
+        {/* Password input */}
         <TextInput
           placeholder="Password"
           placeholderTextColor="#888"
@@ -49,11 +59,13 @@ export default function LoginScreen({ navigation }) {
           secureTextEntry
         />
 
+        {/* Submit button */}
         <Pressable style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>→ Enter</Text>
         </Pressable>
       </View>
 
+      {/* Link to signup screen */}
       <Pressable onPress={() => navigation.navigate('Signup')}>
         <Text style={styles.link}>
           No account yet? <Text style={styles.linkAccent}>Create one →</Text>
@@ -63,10 +75,11 @@ export default function LoginScreen({ navigation }) {
   )
 }
 
+// Style definitions for layout and UI
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5F7', // soft pink
+    backgroundColor: '#FFF5F7', // Soft, friendly pink background
     justifyContent: 'flex-start',
     padding: 24
   },

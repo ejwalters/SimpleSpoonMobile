@@ -12,28 +12,38 @@ import {
 import { supabase } from '../../services/supabaseClient'
 
 export default function SignupScreen({ navigation }) {
+  // Local state to manage user inputs
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
+  // Handles sign up via Supabase
   const handleSignup = async () => {
     const { error } = await supabase.auth.signUp({ email, password })
-    if (error) Alert.alert('Signup failed', error.message)
-    else Alert.alert('🎉 Success!', 'Check your email to confirm your account.')
+
+    if (error) {
+      Alert.alert('Signup failed', error.message)
+    } else {
+      Alert.alert('🎉 Success!', 'Check your email to confirm your account.')
+    }
   }
 
   return (
+    // KeyboardAvoidingView prevents keyboard from covering input fields
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Intro text */}
       <View style={styles.topSection}>
         <Text style={styles.welcome}>🧁 Let's Get Started</Text>
         <Text style={styles.subtitle}>Create your SimpleSpoon account</Text>
       </View>
 
+      {/* Card-like form area */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Sign Up</Text>
 
+        {/* Email input */}
         <TextInput
           placeholder="Email"
           placeholderTextColor="#888"
@@ -41,6 +51,8 @@ export default function SignupScreen({ navigation }) {
           onChangeText={setEmail}
           autoCapitalize="none"
         />
+
+        {/* Password input */}
         <TextInput
           placeholder="Password"
           placeholderTextColor="#888"
@@ -49,11 +61,13 @@ export default function SignupScreen({ navigation }) {
           secureTextEntry
         />
 
+        {/* Submit button */}
         <Pressable style={styles.button} onPress={handleSignup}>
           <Text style={styles.buttonText}>→ Create Account</Text>
         </Pressable>
       </View>
 
+      {/* Link to login screen */}
       <Pressable onPress={() => navigation.navigate('Login')}>
         <Text style={styles.link}>
           Already have an account? <Text style={styles.linkAccent}>Log in →</Text>
@@ -63,6 +77,7 @@ export default function SignupScreen({ navigation }) {
   )
 }
 
+// StyleSheet for layout and theming
 const styles = StyleSheet.create({
   container: {
     flex: 1,

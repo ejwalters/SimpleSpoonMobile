@@ -20,12 +20,14 @@ const Tab = createBottomTabNavigator()
 const AppStack = createNativeStackNavigator()
 const AuthStack = createNativeStackNavigator()
 
+// Custom center tab button used for "Inspire" tab
 const InspireButton = ({ children, onPress }) => (
   <TouchableOpacity onPress={onPress} style={cookStyles.buttonContainer}>
     <View style={cookStyles.button}>{children}</View>
   </TouchableOpacity>
 )
 
+// Main bottom tab navigation for authenticated users
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -47,6 +49,7 @@ function MainTabs() {
           elevation: 12,
           paddingTop: 10
         },
+        // Dynamically define icons based on the route name
         tabBarIcon: ({ focused }) => {
           let iconName = ''
           let iconSize = 26
@@ -91,7 +94,7 @@ function MainTabs() {
         name="Inspire"
         component={InspireScreen}
         options={{
-          tabBarButton: (props) => <InspireButton {...props} />,
+          tabBarButton: (props) => <InspireButton {...props} />, // Use custom button for Inspire tab
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'flame' : 'flame-outline'}
@@ -107,6 +110,7 @@ function MainTabs() {
   )
 }
 
+// Main stack navigator for app: includes tabs and recipe detail
 function AppStackScreen() {
   return (
     <AppStack.Navigator>
@@ -116,6 +120,7 @@ function AppStackScreen() {
   )
 }
 
+// Auth flow navigator shown when user is not logged in
 function AuthStackScreen() {
   return (
     <AuthStack.Navigator>
@@ -125,29 +130,35 @@ function AuthStackScreen() {
   )
 }
 
+// AppNavigator: determines whether to show the app or auth stack based on user auth state
 export default function AppNavigator() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    const session = supabase.auth.session();
-    setUser(session?.user ?? null);
+    // Get initial user session
+    const session = supabase.auth.session()
+    setUser(session?.user ?? null)
 
+    // Listen for authentication state changes (e.g., login/logout)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      setUser(session?.user ?? null)
+    })
 
+    // Clean up listener when component unmounts
     return () => {
-      listener?.unsubscribe();
-    };
-  }, []);
+      listener?.unsubscribe()
+    }
+  }, [])
 
   return (
     <NavigationContainer>
+      {/* Conditional navigation tree: show auth flow if no user */}
       {user ? <AppStackScreen /> : <AuthStackScreen />}
     </NavigationContainer>
   )
 }
 
+// Styles for the Inspire center tab button
 const cookStyles = StyleSheet.create({
   buttonContainer: {
     top: -24,

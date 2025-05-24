@@ -18,31 +18,32 @@ import { supabase } from '../services/supabaseClient'
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 export default function RecipeDetailScreen({ route, navigation }) {
+  // Extract recipe data from route params
   const { recipe } = route.params
   const insets = useSafeAreaInsets()
   const [aiQuestion, setAiQuestion] = useState('')
   const [aiResponse, setAiResponse] = useState('')
-  const [userId, setUserId] = useState(null);
-  const [showSaveTooltip, setShowSaveTooltip] = useState(false);
-  const [showFavoriteTooltip, setShowFavoriteTooltip] = useState(false);
+  const [userId, setUserId] = useState(null)
+  const [showSaveTooltip, setShowSaveTooltip] = useState(false)
+  const [showFavoriteTooltip, setShowFavoriteTooltip] = useState(false)
 
-  console.log(recipe);
-
+  // Fetch current logged in user
   useEffect(() => {
-    const user = supabase.auth.user();
-    if (user) setUserId(user.id);
-  }, []);
+    const user = supabase.auth.user()
+    if (user) setUserId(user.id)
+  }, [])
 
+  // Ask the AI chef a question based on the current recipe
   const handleAIQuestion = async () => {
-    if (!aiQuestion.trim()) return;
-  
+    if (!aiQuestion.trim()) return
+
     const recipeData = {
-        title: recipe.title,
-        tag: recipe.tag || 'Uncategorized',
-        ingredients: recipe.ingredients || ['No ingredients provided.'],
-        instructions: recipe.instructions || ['No instructions provided.']
-    };      
-  
+      title: recipe.title,
+      tag: recipe.tag || 'Uncategorized',
+      ingredients: recipe.ingredients || ['No ingredients provided.'],
+      instructions: recipe.instructions || ['No instructions provided.']
+    }
+
     try {
       const res = await fetch('http://localhost:3001/ask-ai-chef', {
         method: 'POST',
@@ -51,23 +52,21 @@ export default function RecipeDetailScreen({ route, navigation }) {
           question: aiQuestion,
           recipe: recipeData
         })
-      });
-  
-      const data = await res.json();
-      setAiResponse(data.answer || 'Sorry, something went wrong.');
-      // Optional: speak the response
-      // Speech.speak(data.answer || 'Sorry, something went wrong.');
+      })
+
+      const data = await res.json()
+      setAiResponse(data.answer || 'Sorry, something went wrong.')
     } catch (err) {
-      console.error('AI Error:', err);
-      setAiResponse('Error contacting the AI chef.');
+      console.error('AI Error:', err)
+      setAiResponse('Error contacting the AI chef.')
     }
-  };  
-  
-  const isOwner = recipe.user_id && userId && recipe.user_id === userId;
-  const isAISuggestion = !recipe.user_id; // AI recipes have no user_id
+  }
 
-  console.log(isOwner, isAISuggestion, userId);
+  // Determine if this recipe belongs to the current user or is AI-suggested
+  const isOwner = recipe.user_id && userId && recipe.user_id === userId
+  const isAISuggestion = !recipe.user_id
 
+  // Save recipe to user's collection
   const handleSaveRecipe = async () => {
     try {
       const res = await fetch('http://localhost:3001/save-recipe', {
@@ -76,24 +75,24 @@ export default function RecipeDetailScreen({ route, navigation }) {
         body: JSON.stringify({
           recipe: {
             ...recipe,
-            user_id: userId // always assign the current user as the owner
+            user_id: userId
           }
         })
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
       if (data.success) {
-        alert('Recipe saved!');
+        alert('Recipe saved!')
       } else {
-        alert('Failed to save recipe.');
+        alert('Failed to save recipe.')
       }
     } catch (err) {
-      alert('Error saving recipe.');
+      alert('Error saving recipe.')
     }
-  };
+  }
 
   const handleFavorite = () => {
-    // Implementation of handleFavorite function
-  };
+    // Placeholder: Add logic for favoriting a recipe
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -102,10 +101,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
           {recipe.image?.uri ? (
             <Image source={recipe.image} style={styles.image} />
           ) : (
-            <LinearGradient
-              colors={['#FFD6E8', '#FFF5F7']}
-              style={styles.image}
-            >
+            <LinearGradient colors={['#FFD6E8', '#FFF5F7']} style={styles.image}>
               <View style={styles.placeholderContent}>
                 <Ionicons name="restaurant-outline" size={64} color="#FF5C8A" />
                 <Text style={styles.placeholderText}>
@@ -114,15 +110,11 @@ export default function RecipeDetailScreen({ route, navigation }) {
               </View>
             </LinearGradient>
           )}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.35)']}
-            style={styles.imageGradient}
-          />
+
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.35)']} style={styles.imageGradient} />
+
           <View style={[styles.topButtons, { top: insets.top - 50 }]}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={28} color="#FF5C8A" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -133,23 +125,19 @@ export default function RecipeDetailScreen({ route, navigation }) {
               <Ionicons name="heart-outline" size={26} color="#FF5C8A" />
             </TouchableOpacity>
           </View>
+
           {showFavoriteTooltip && (
             <View style={[styles.tooltip, { position: 'absolute', top: 40, right: 10 }]}>
-              <Text style={styles.tooltipText}>
-                Quickly access this recipe from your favorites.
-              </Text>
+              <Text style={styles.tooltipText}>Quickly access this recipe from your favorites.</Text>
               <TouchableOpacity onPress={() => setShowFavoriteTooltip(false)}>
                 <Text style={styles.tooltipClose}>Got it</Text>
               </TouchableOpacity>
             </View>
           )}
+
           <View style={styles.titleOverlay}>
             <Text style={styles.title}>{recipe.title}</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tagsContainer}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagsContainer}>
               {(recipe.tag || []).map((tag, index) => (
                 <View key={index} style={styles.tagPill}>
                   <Text style={styles.tagText}>{tag}</Text>
@@ -159,22 +147,16 @@ export default function RecipeDetailScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* Move Save to My Recipes button here */}
+        {/* Save to My Recipes button for AI-suggested or shared recipes */}
         {(!isOwner || isAISuggestion) && userId && (
           <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 0 }}>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSaveRecipe}
-              onLongPress={() => setShowSaveTooltip(true)}
-            >
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveRecipe} onLongPress={() => setShowSaveTooltip(true)}>
               <Ionicons name="bookmark-outline" size={22} color="#fff" />
               <Text style={styles.saveButtonText}>Save to My Recipes</Text>
             </TouchableOpacity>
             {showSaveTooltip && (
               <View style={styles.tooltip}>
-                <Text style={styles.tooltipText}>
-                  Make a copy you can edit and keep in your collection.
-                </Text>
+                <Text style={styles.tooltipText}>Make a copy you can edit and keep in your collection.</Text>
                 <TouchableOpacity onPress={() => setShowSaveTooltip(false)}>
                   <Text style={styles.tooltipClose}>Got it</Text>
                 </TouchableOpacity>
@@ -183,46 +165,45 @@ export default function RecipeDetailScreen({ route, navigation }) {
           </View>
         )}
 
-        {/*<TouchableOpacity style={styles.floatingMicButton} onPress={handleAIQuestion}>
-          <Ionicons name="mic-outline" size={24} color="#fff" />
-        </TouchableOpacity>*/}
-
         <View style={styles.detailsSection}>
+          {/* Ingredients List */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>🧾 Ingredients</Text>
             <View style={styles.ingredientGrid}>
-                {(recipe.ingredients || []).map((item, idx) => (
-                    <Text key={idx} style={styles.ingredient}>{item}</Text>
-                ))}
+              {(recipe.ingredients || []).map((item, idx) => (
+                <Text key={idx} style={styles.ingredient}>{item}</Text>
+              ))}
             </View>
           </View>
 
+          {/* Nutrition Info (if available) */}
           {recipe.nutrition_info && (
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>🍎 Nutritional Info</Text>
               <View style={styles.ingredientGrid}>
                 {(() => {
-                  // Handle if nutrition_info is an array with one object
                   const nutrition = Array.isArray(recipe.nutrition_info) && recipe.nutrition_info.length === 1
                     ? recipe.nutrition_info[0]
-                    : recipe.nutrition_info;
+                    : recipe.nutrition_info
                   return Object.entries(nutrition).map(([key, value]) => (
                     <Text key={key} style={styles.ingredient}>{`${key.charAt(0).toUpperCase() + key.slice(1)}: ${typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value)}`}</Text>
-                  ));
+                  ))
                 })()}
               </View>
             </View>
           )}
 
+          {/* Instructions */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>👩‍🍳 Instructions</Text>
             <View style={styles.stepBox}>
-                {(recipe.instructions || []).map((step, idx) => (
-                    <Text key={idx} style={styles.step}>{`${idx + 1}. ${step}`}</Text>
-                ))}
+              {(recipe.instructions || []).map((step, idx) => (
+                <Text key={idx} style={styles.step}>{`${idx + 1}. ${step}`}</Text>
+              ))}
             </View>
           </View>
 
+          {/* Ask the AI Chef */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>🧠 Ask the AI Chef</Text>
             <Text style={styles.aiHelperText}>Need substitutions or have a question?</Text>

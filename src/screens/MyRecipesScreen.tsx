@@ -25,18 +25,19 @@ export default function MyRecipesScreen() {
   const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // Debounce the search input to reduce unnecessary requests
   useEffect(() => {
-    // Debounce search input
     const handler = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(handler)
   }, [search])
 
+  // Retrieve user ID from Supabase
   useEffect(() => {
-    // Get current user id from supabase
     const user = supabase.auth.user()
     if (user) setUserId(user.id)
   }, [])
 
+  // Fetch recipes whenever the userId, search term, or filter changes
   useEffect(() => {
     if (!userId) return
     setLoading(true)
@@ -45,6 +46,7 @@ export default function MyRecipesScreen() {
         const params = new URLSearchParams({ user_id: userId })
         if (debouncedSearch) params.append('search', debouncedSearch)
         if (selectedFilter !== 'All') params.append('tag', selectedFilter)
+
         const res = await fetch(`http://localhost:3001/api/recipes?${params.toString()}`)
         const data = await res.json()
         setRecipes(data.recipes || [])
@@ -57,8 +59,6 @@ export default function MyRecipesScreen() {
     fetchRecipes()
   }, [userId, debouncedSearch, selectedFilter])
 
-  const filteredRecipes = recipes
-
   const renderItem = ({ item }) => {
     if (item.id === 'spacer') {
       return <View style={[styles.card, styles.spacer]} />
@@ -68,6 +68,7 @@ export default function MyRecipesScreen() {
         style={styles.card}
         onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
       >
+        {/* Conditionally render recipe image or a placeholder if not available */}
         {item.image?.uri ? (
           <Image source={item.image} style={styles.image} />
         ) : (
@@ -87,8 +88,9 @@ export default function MyRecipesScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Text style={styles.heading}>My Recipes ({filteredRecipes.length})</Text>
+      <Text style={styles.heading}>My Recipes ({recipes.length})</Text>
 
+      {/* Search bar input */}
       <TextInput
         placeholder="Search your recipes"
         placeholderTextColor="#999"
@@ -97,6 +99,7 @@ export default function MyRecipesScreen() {
         style={styles.searchBar}
       />
 
+      {/* Filter chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -115,11 +118,12 @@ export default function MyRecipesScreen() {
         ))}
       </ScrollView>
 
+      {/* Recipe list or loading/empty states */}
       {loading ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Loading recipes...</Text>
         </View>
-      ) : filteredRecipes.length === 0 ? (
+      ) : recipes.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No recipes found.</Text>
           <Text style={styles.emptySubtext}>
@@ -128,7 +132,7 @@ export default function MyRecipesScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredRecipes.length === 1 ? [...filteredRecipes, { id: 'spacer' }] : filteredRecipes}
+          data={recipes.length === 1 ? [...recipes, { id: 'spacer' }] : recipes}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           numColumns={2}
@@ -141,6 +145,7 @@ export default function MyRecipesScreen() {
   )
 }
 
+// Stylesheet
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -233,15 +238,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     minWidth: 36,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   moreTagPill: {
-    backgroundColor: '#FF5C8A44',
+    backgroundColor: '#FF5C8A44'
   },
   tagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FF5C8A',
+    color: '#FF5C8A'
   },
   empty: {
     flex: 1,
@@ -265,13 +270,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopRightRadius: 16
   },
   placeholderInitials: {
     marginTop: 4,
     fontSize: 18,
     fontWeight: '700',
     color: '#FF5C8A',
-    letterSpacing: 2,
-  },
+    letterSpacing: 2
+  }
 })
