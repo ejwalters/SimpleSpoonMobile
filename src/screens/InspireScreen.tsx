@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import { API_BASE_URL } from '../constants/config'
 
 // InspireScreen: Allows user to prompt AI for recipe inspiration based on input text
 export default function InspireScreen({ navigation }) {
@@ -25,7 +26,7 @@ export default function InspireScreen({ navigation }) {
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:3001/inspire-recipes', {
+      const res = await fetch(`${API_BASE_URL}/inspire-recipes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: input })

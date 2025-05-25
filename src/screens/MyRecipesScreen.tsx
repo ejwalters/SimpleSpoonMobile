@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../services/supabaseClient'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import { API_BASE_URL } from '../constants/config'
 
 const recipeFilters = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack']
 
@@ -40,7 +41,7 @@ export default function MyRecipesScreen() {
       if (debouncedSearch) params.append('search', debouncedSearch)
       if (selectedFilter !== 'All') params.append('tag', selectedFilter)
 
-      const res = await fetch(`http://localhost:3001/api/recipes?${params.toString()}`)
+      const res = await fetch(`${API_BASE_URL}/api/recipes?${params.toString()}`)
       const data = await res.json()
       setRecipes(data.recipes || [])
     } catch (err) {
@@ -301,5 +302,57 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FF5C8A',
     letterSpacing: 2
+  },
+  nutritionCard: {
+    backgroundColor: '#FFF5F7',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12
+  },
+  nutritionRow: {
+    marginBottom: 14,
+  },
+  nutritionLabel: {
+    fontSize: 13,
+    color: '#FF5C8A',
+    fontWeight: '600',
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  nutritionInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nutritionInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  nutritionRemoveBtn: {
+    marginLeft: 8,
+  },
+  nutritionAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  nutritionAddText: {
+    color: '#FF5C8A',
+    fontWeight: '600',
+    marginLeft: 4,
+    fontSize: 15,
   },
 })

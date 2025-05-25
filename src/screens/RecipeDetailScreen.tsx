@@ -15,6 +15,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Speech from 'expo-speech'
 import { supabase } from '../services/supabaseClient'
+import { API_BASE_URL } from '../constants/config'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
@@ -40,7 +41,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
 
       const checkFavoriteStatus = async () => {
         try {
-          const res = await fetch('http://localhost:3001/favorite-recipe-check', {
+          const res = await fetch(`${API_BASE_URL}/favorite-recipe-check`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, recipe_id: recipe.id })
@@ -68,7 +69,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/ask-ai-chef', {
+      const res = await fetch(`${API_BASE_URL}/ask-ai-chef`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,7 +90,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
 
   const handleSaveRecipe = async () => {
     try {
-      const res = await fetch('http://localhost:3001/save-recipe', {
+      const res = await fetch(`${API_BASE_URL}/save-recipe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipe: { ...recipe, user_id: userId } })
@@ -109,7 +110,7 @@ export default function RecipeDetailScreen({ route, navigation }) {
       const endpoint = '/favorite-recipe';
       const method = isFavorited ? 'DELETE' : 'POST';
 
-      const res = await fetch(`http://localhost:3001${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, recipe_id: recipe.id })

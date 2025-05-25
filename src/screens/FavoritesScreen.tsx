@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../services/supabaseClient'
 import Ionicons from 'react-native-vector-icons/Ionicons'
+import { API_BASE_URL } from '../constants/config'
 
 const recipeFilters = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack']
 
@@ -44,7 +45,7 @@ export default function FavoritesScreen() {
       const params = new URLSearchParams({ user_id: userId })
       if (debouncedSearch) params.append('search', debouncedSearch)
       if (selectedFilter !== 'All') params.append('tag', selectedFilter)
-      const res = await fetch(`http://localhost:3001/api/favorite-recipes?${params.toString()}`)
+      const res = await fetch(`${API_BASE_URL}/api/favorite-recipes?${params.toString()}`)
       const data = await res.json()
       setRecipes(data.recipes || [])
     } catch (err) {

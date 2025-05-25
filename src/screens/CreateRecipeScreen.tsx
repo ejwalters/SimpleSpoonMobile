@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist'
+import { API_BASE_URL } from '../constants/config'
 
 export default function CreateRecipeScreen({ navigation }) {
   const [mode, setMode] = useState('manual') // 'manual' or 'scan'
@@ -15,7 +16,16 @@ export default function CreateRecipeScreen({ navigation }) {
     tags: [],
     ingredients: [],
     instructions: [],
-    nutrition_info: {},
+    nutrition_info: {
+      calories: '',
+      fat: '',
+      cholesterol: '',
+      sodium: '',
+      carbs: '',
+      fiber: '',
+      sugar: '',
+      protein: '',
+    },
     image: null,
   })
   const [ingredientInput, setIngredientInput] = useState('')
@@ -156,6 +166,8 @@ export default function CreateRecipeScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.formCard} keyboardShouldPersistTaps="handled">
+        {/* Wrap all form sections in a fragment to fix adjacent JSX error */}
+        <>
         {/* --- Image Picker --- */}
         <Text style={styles.sectionHeader}>Image</Text>
         <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
@@ -306,46 +318,36 @@ export default function CreateRecipeScreen({ navigation }) {
         </View>
 
         {/* --- Nutrition Info --- */}
-        <Text style={styles.sectionHeader}>Nutrition (optional)</Text>
-        {Object.entries(form.nutrition_info).map(([key, value], idx) => (
-          <View key={key} style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 1, marginRight: 6 }]}
-              placeholder="Nutrient (e.g. Calories)"
-              value={key}
-              onChangeText={v => {
-                const newInfo = { ...form.nutrition_info }
-                newInfo[v] = newInfo[key]
-                delete newInfo[key]
-                updateField('nutrition_info', newInfo)
-              }}
-            />
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="Amount"
-              value={value}
-              onChangeText={v => {
-                const newInfo = { ...form.nutrition_info }
-                newInfo[key] = v
-                updateField('nutrition_info', newInfo)
-              }}
-            />
-            <TouchableOpacity onPress={() => {
-              const newInfo = { ...form.nutrition_info }
-              delete newInfo[key]
-              updateField('nutrition_info', newInfo)
-            }}>
-              <Ionicons name="remove-circle" size={24} color="#FF5C8A" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => updateField('nutrition_info', { ...form.nutrition_info, '': '' })}
-        >
-          <Ionicons name="add-circle" size={22} color="#FF5C8A" />
-          <Text style={styles.addBtnText}>Add Nutrition Fact</Text>
-        </TouchableOpacity>
+        <View style={styles.nutritionCard}>
+          <Text style={styles.sectionHeader}>Nutrition (optional)</Text>
+          {[
+            { key: 'calories', label: 'Calories', unit: 'kcal' },
+            { key: 'fat', label: 'Fat', unit: 'g' },
+            { key: 'cholesterol', label: 'Cholesterol', unit: 'mg' },
+            { key: 'sodium', label: 'Sodium', unit: 'mg' },
+            { key: 'carbs', label: 'Carbs', unit: 'g' },
+            { key: 'fiber', label: 'Fiber', unit: 'g' },
+            { key: 'sugar', label: 'Sugar', unit: 'g' },
+            { key: 'protein', label: 'Protein', unit: 'g' },
+          ].map(({ key, label, unit }) => (
+            <View key={key} style={styles.nutritionRow}>
+              <Text style={styles.nutritionLabel}>{label}</Text>
+              <View style={styles.nutritionInputRow}>
+                <TextInput
+                  style={styles.nutritionInput}
+                  placeholder={unit}
+                  value={form.nutrition_info[key]}
+                  onChangeText={v => {
+                    const newInfo = { ...form.nutrition_info }
+                    newInfo[key] = v
+                    updateField('nutrition_info', newInfo)
+                  }}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* --- Highlight/Description Field --- */}
         <Text style={styles.sectionHeader}>Highlight</Text>
@@ -361,6 +363,7 @@ export default function CreateRecipeScreen({ navigation }) {
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
           <Text style={styles.saveBtnText}>Save Recipe</Text>
         </TouchableOpacity>
+        </>
       </ScrollView>
     </SafeAreaView>
   )
@@ -500,5 +503,50 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
+  },
+  nutritionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginBottom: 16,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  nutritionRow: {
+    marginBottom: 12,
+  },
+  nutritionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF5C8A',
+    marginBottom: 4,
+  },
+  nutritionInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nutritionInput: {
+    flex: 1,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  nutritionRemoveBtn: {
+    marginLeft: 8,
+  },
+  nutritionAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  nutritionAddText: {
+    color: '#FF5C8A',
+    fontWeight: '600',
+    marginLeft: 4,
   },
 })
