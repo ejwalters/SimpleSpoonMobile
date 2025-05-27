@@ -1,19 +1,66 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, ActivityIndicator, Keyboard } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist'
 import { API_BASE_URL } from '../constants/config'
+import * as FileSystem from 'expo-file-system'
+import { supabase } from '../services/supabaseClient'
+import { decode } from 'base64-arraybuffer';
 
 export default function CreateRecipeScreen({ navigation }) {
-  const [mode, setMode] = useState('manual') // 'manual' or 'scan'
+  const [mode, setMode] = useState('manual')
   const [image, setImage] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [userId, setUserId] = useState(null)
+
+  useEffect(() => {
+    const user = supabase.auth.user()
+    if (user) setUserId(user.id)
+  }, [])
+  // Helper to upload a single image and return its public URL
+  const uploadImageToStorage = async (uri, userId, idx) => {
+    try {
+      // Read image as base64
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+  
+      // Convert to ArrayBuffer for Supabase
+      const arrayBuffer = decode(base64);
+  
+      // Generate a unique filename
+      const filename = `${userId}/recipe_${Date.now()}_${idx}.jpg`;
+  
+      // Upload to Supabase
+      const { data, error } = await supabase.storage
+        .from('recipe-images')
+        .upload(filename, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+  
+      if (error) throw error;
+  
+      // Get the public URL
+      const { publicURL } = supabase.storage
+        .from('recipe-images')
+        .getPublicUrl(filename).data;
+  
+      return publicURL;
+    } catch (err) {
+      console.error('Upload error:', err);
+      throw err;
+    }
+  };
+  
+
   const [form, setForm] = useState({
     title: '',
-    description: '',
-    tags: [],
+    highlight: '',
+    tag: [],
     ingredients: [],
     instructions: [],
     nutrition_info: {
@@ -33,32 +80,56 @@ export default function CreateRecipeScreen({ navigation }) {
   const [stepInput, setStepInput] = useState('')
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null)
   const [steps, setSteps] = useState(form.instructions.map((step, idx) => ({ key: `${idx}`, label: step })))
+  const [images, setImages] = useState<string[]>([])
 
-  // --- Image Picker and AI Extraction ---
-  const pickImage = async () => {
+  // --- Image Picker for Start from Scratch (multi-image) ---
+  const pickImageFromLibrary = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    })
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImages(prev => [...prev, ...result.assets.map(asset => asset.uri)])
+    }
+  }
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Camera permission is required!');
+      return;
+    }
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImages(prev => [...prev, ...result.assets.map(asset => asset.uri)]);
+    }
+  }
+
+  // --- Image Picker and AI Extraction for Scan a Recipe Card ---
+  const pickImageForAI = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.8,
     })
-    if (!result.cancelled) {
-      setImage(result.uri)
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       setLoading(true)
       try {
-        // For React Native, use a polyfill for FormData if needed
+        const uri = result.assets[0].uri
         const data = new FormData()
         data.append('file', {
-          uri: result.uri,
+          uri,
           name: 'recipe.jpg',
           type: 'image/jpeg',
         } as unknown as Blob)
-
-        const res = await fetch('http://localhost:3001/api/analyze-recipe-image', {
+        const res = await fetch(`${API_BASE_URL}/api/analyze-recipe-image`, {
           method: 'POST',
           body: data,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          headers: { 'Content-Type': 'multipart/form-data' },
         })
         const extracted = await res.json()
         setForm({ ...form, ...extracted })
@@ -86,11 +157,49 @@ export default function CreateRecipeScreen({ navigation }) {
     return { ...f, [field]: arr }
   })
 
-  // --- Save Handler ---
+  // Save handler: upload all images, then send recipe to backend
   const handleSave = async () => {
-    // Add user_id, etc.
-    // POST to your backend
-    // On success: navigation.goBack()
+    if (!userId) {
+      alert('User not authenticated')
+      return
+    }
+    if (!form.title.trim()) {
+      alert('Please enter a recipe title')
+      return
+    }
+    setLoading(true)
+    try {
+      // Upload all images in parallel
+      let mainImageUrl = null
+      let supportingImageUrls = []
+      if (images.length > 0) {
+        const uploadPromises = images.map((uri, idx) => uploadImageToStorage(uri, userId, idx))
+        const urls = await Promise.all(uploadPromises)
+        mainImageUrl = urls[0]
+        supportingImageUrls = urls.slice(1)
+      }
+      // Prepare recipe payload
+      const recipePayload = {
+        ...form,
+        user_id: userId,
+        image: mainImageUrl,
+        supporting_images: supportingImageUrls,
+      }
+      // Send to backend
+      const res = await fetch(`${API_BASE_URL}/save-recipe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe: recipePayload })
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed to save recipe')
+      alert('Recipe saved!')
+      navigation.goBack()
+    } catch (err) {
+      alert('Save failed: ' + (err.message || JSON.stringify(err)))
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Render function for each step
@@ -169,17 +278,47 @@ export default function CreateRecipeScreen({ navigation }) {
         {/* Wrap all form sections in a fragment to fix adjacent JSX error */}
         <>
         {/* --- Image Picker --- */}
-        <Text style={styles.sectionHeader}>Image</Text>
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          {image || form.image ? (
-            <Image source={{ uri: image || form.image }} style={styles.imagePreview} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="camera" size={32} color="#FF5C8A" />
-              <Text style={styles.imagePickerText}>Add a photo</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {mode === 'manual' ? (
+          <>
+            <Text style={styles.sectionHeader}>Images</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+              {images.map((uri, idx) => (
+                <View key={idx} style={styles.imageThumbContainer}>
+                  <Image source={{ uri }} style={styles.imageThumb} />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => setImages(images.filter((_, i) => i !== idx))}
+                  >
+                    <Ionicons name="close-circle" size={22} color="#FF5C8A" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addImageBtn} onPress={pickImageFromLibrary}>
+                <Ionicons name="images" size={28} color="#FF5C8A" />
+                <Text style={styles.addImageText}>Gallery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addImageBtn} onPress={takePhoto}>
+                <Ionicons name="camera" size={28} color="#FF5C8A" />
+                <Text style={styles.addImageText}>Camera</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionHeader}>Image</Text>
+            <TouchableOpacity style={styles.imagePicker} onPress={pickImageForAI}>
+              {image || form.image ? (
+                <Image source={{ uri: image || form.image }} style={styles.imagePreview} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="camera" size={32} color="#FF5C8A" />
+                  <Text style={styles.imagePickerText}>Add a photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {loading && <ActivityIndicator size="large" color="#FF5C8A" style={{ marginVertical: 12 }} />}
+          </>
+        )}
 
         {/* --- Title --- */}
         <Text style={styles.sectionHeader}>Title</Text>
@@ -354,14 +493,27 @@ export default function CreateRecipeScreen({ navigation }) {
         <TextInput
           style={styles.input}
           placeholder="What makes this recipe special? (e.g. '5-min breakfast, kid-friendly, high-protein...')"
-          value={form.description}
-          onChangeText={v => updateField('description', v)}
+          value={form.highlight}
+          onChangeText={v => updateField('highlight', v)}
           multiline
         />
 
         {/* --- Save Button --- */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Recipe</Text>
+        <TouchableOpacity 
+          style={[styles.saveBtn, loading && styles.saveBtnDisabled]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <View style={styles.saveBtnContent}>
+              <ActivityIndicator color="#FFF" size="small" />
+              <Text style={[styles.saveBtnText, { marginLeft: 8 }]}>
+                {uploadProgress > 0 ? `Uploading... ${Math.round(uploadProgress * 100)}%` : 'Saving...'}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.saveBtnText}>Save Recipe</Text>
+          )}
         </TouchableOpacity>
         </>
       </ScrollView>
@@ -548,5 +700,58 @@ const styles = StyleSheet.create({
     color: '#FF5C8A',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  imageScroll: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  imageThumbContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  imageThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 2,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  addImageBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#FFF5F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FF5C8A44',
+    marginRight: 8,
+  },
+  addImageText: {
+    color: '#FF5C8A',
+    fontWeight: '600',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  saveBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnDisabled: {
+    opacity: 0.7,
   },
 })
