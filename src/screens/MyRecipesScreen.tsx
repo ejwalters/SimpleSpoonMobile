@@ -68,14 +68,15 @@ export default function MyRecipesScreen() {
     if (item.id === 'spacer') {
       return <View style={[styles.card, styles.spacer]} />
     }
+    console.log(item.image)
     return (
       <TouchableOpacity
         style={styles.card}
         onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
       >
         {/* Conditionally render recipe image or a placeholder if not available */}
-        {item.image?.uri ? (
-          <Image source={item.image} style={styles.image} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.image} />
         ) : (
           <View style={styles.placeholderImage}>
             <Ionicons name="restaurant-outline" size={36} color="#FF5C8A" />

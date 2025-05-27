@@ -70,8 +70,8 @@ export default function FavoritesScreen() {
         style={styles.card}
         onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
       >
-        {item.image?.uri ? (
-          <Image source={item.image} style={styles.image} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.image} />
         ) : (
           <View style={styles.placeholderImage}>
             <Ionicons name="restaurant-outline" size={36} color="#FF5C8A" />
