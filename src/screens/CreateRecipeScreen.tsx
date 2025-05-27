@@ -9,7 +9,9 @@ import * as FileSystem from 'expo-file-system'
 import { supabase } from '../services/supabaseClient'
 import { decode } from 'base64-arraybuffer';
 
-export default function CreateRecipeScreen({ navigation }) {
+export default function CreateRecipeScreen({ navigation, route }) {
+  const isEdit = route?.params?.isEdit;
+  const editingRecipe = route?.params?.recipe;
   const [mode, setMode] = useState('manual')
   const [image, setImage] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -57,30 +59,58 @@ export default function CreateRecipeScreen({ navigation }) {
   };
   
 
-  const [form, setForm] = useState({
-    title: '',
-    highlight: '',
-    tag: [],
-    ingredients: [],
-    instructions: [],
-    nutrition_info: {
-      calories: '',
-      fat: '',
-      cholesterol: '',
-      sodium: '',
-      carbs: '',
-      fiber: '',
-      sugar: '',
-      protein: '',
-    },
-    image: null,
-  })
+  const [form, setForm] = useState(
+    editingRecipe
+      ? {
+          ...editingRecipe,
+          nutrition_info: Object.fromEntries(
+            Object.entries(editingRecipe.nutrition_info || {}).map(([k, v]) => [k, v != null ? String(v) : ''])
+          ),
+          tag: Array.isArray(editingRecipe.tag) ? [...editingRecipe.tag] : [],
+          ingredients: Array.isArray(editingRecipe.ingredients) ? [...editingRecipe.ingredients] : [],
+          instructions: Array.isArray(editingRecipe.instructions) ? [...editingRecipe.instructions] : [],
+          image: editingRecipe.image || null,
+        }
+      : {
+          title: '',
+          highlight: '',
+          tag: [],
+          ingredients: [],
+          instructions: [],
+          nutrition_info: {
+            calories: '',
+            fat: '',
+            cholesterol: '',
+            sodium: '',
+            carbs: '',
+            fiber: '',
+            sugar: '',
+            protein: '',
+          },
+          image: null,
+        }
+  )
   const [ingredientInput, setIngredientInput] = useState('')
   const [editingIngredientIdx, setEditingIngredientIdx] = useState<number | null>(null)
   const [stepInput, setStepInput] = useState('')
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null)
-  const [steps, setSteps] = useState(form.instructions.map((step, idx) => ({ key: `${idx}`, label: step })))
+  const [steps, setSteps] = useState<{ key: string, label: string }[]>(form.instructions.map((step, idx) => ({ key: `${idx}`, label: step })))
   const [images, setImages] = useState<string[]>([])
+
+  // Add state for allImages
+  const [allImages, setAllImages] = useState(() => {
+    if (isEdit && editingRecipe) {
+      const existing = [editingRecipe.image, ...(editingRecipe.supporting_images || [])].filter(Boolean)
+      return [...existing]
+    }
+    return []
+  })
+
+  // When new images are picked, add to allImages
+  const handleAddImages = (uris) => setAllImages(prev => [...prev, ...uris])
+
+  // Remove image by index
+  const handleRemoveImage = (idx) => setAllImages(prev => prev.filter((_, i) => i !== idx))
 
   // --- Image Picker for Start from Scratch (multi-image) ---
   const pickImageFromLibrary = async () => {
@@ -169,32 +199,58 @@ export default function CreateRecipeScreen({ navigation }) {
     }
     setLoading(true)
     try {
-      // Upload all images in parallel
       let mainImageUrl = null
       let supportingImageUrls = []
-      if (images.length > 0) {
-        const uploadPromises = images.map((uri, idx) => uploadImageToStorage(uri, userId, idx))
+      if (allImages.length > 0) {
+        // Upload any local images (not URLs)
+        const uploadPromises = allImages.map(async (uri, idx) => {
+          if (uri.startsWith('http')) return uri
+          return await uploadImageToStorage(uri, userId, idx)
+        })
         const urls = await Promise.all(uploadPromises)
         mainImageUrl = urls[0]
         supportingImageUrls = urls.slice(1)
       }
-      // Prepare recipe payload
+      // Ensure nutrition_info is a flat object
+      let nutritionInfo = form.nutrition_info;
+      if (Array.isArray(nutritionInfo)) nutritionInfo = nutritionInfo[0];
       const recipePayload = {
         ...form,
+        nutrition_info: nutritionInfo,
         user_id: userId,
         image: mainImageUrl,
         supporting_images: supportingImageUrls,
       }
-      // Send to backend
-      const res = await fetch(`${API_BASE_URL}/save-recipe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipe: recipePayload })
-      })
-      const result = await res.json()
-      if (!res.ok) throw new Error(result.error || 'Failed to save recipe')
-      alert('Recipe saved!')
-      navigation.goBack()
+      if (isEdit) {
+        // PATCH to /update-recipe with id and updated fields
+        const { id, ...fieldsToUpdate } = recipePayload
+        const res = await fetch(`${API_BASE_URL}/update-recipe`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingRecipe.id, ...fieldsToUpdate })
+        })
+        const result = await res.json()
+        if (!res.ok || !result.success) throw new Error(result.error || 'Failed to update recipe')
+        alert('Recipe updated!')
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: 'MainTabs' },
+            { name: 'RecipeDetail', params: { recipe: { ...fieldsToUpdate, id: editingRecipe.id } } }
+          ]
+        })
+      } else {
+        // POST to /save-recipe as before
+        const res = await fetch(`${API_BASE_URL}/save-recipe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipe: recipePayload })
+        })
+        const result = await res.json()
+        if (!res.ok) throw new Error(result.error || 'Failed to save recipe')
+        alert('Recipe saved!')
+        navigation.goBack()
+      }
     } catch (err) {
       alert('Save failed: ' + (err.message || JSON.stringify(err)))
     } finally {
@@ -264,44 +320,279 @@ export default function CreateRecipeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Option Selector */}
-      <View style={styles.modeSwitch}>
-        <TouchableOpacity style={[styles.modeBtn, mode === 'manual' && styles.modeBtnActive]} onPress={() => setMode('manual')}>
-          <Text style={[styles.modeText, mode === 'manual' && styles.modeTextActive]}>Start from scratch</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.modeBtn, mode === 'scan' && styles.modeBtnActive]} onPress={() => setMode('scan')}>
-          <Text style={[styles.modeText, mode === 'scan' && styles.modeTextActive]}>Scan a recipe card</Text>
-        </TouchableOpacity>
-      </View>
-
+      {isEdit && (
+        <View style={styles.editHeaderNoBg}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelBtn}>
+            <Ionicons name="arrow-back" size={24} color="#FF5C8A" />
+          </TouchableOpacity>
+          <Text style={styles.editHeaderText}>Edit Recipe</Text>
+        </View>
+      )}
+      {!isEdit && (
+        <View style={styles.modeSwitch}>
+          <TouchableOpacity style={[styles.modeBtn, mode === 'manual' && styles.modeBtnActive]} onPress={() => setMode('manual')}>
+            <Text style={[styles.modeText, mode === 'manual' && styles.modeTextActive]}>Start from scratch</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.modeBtn, mode === 'scan' && styles.modeBtnActive]} onPress={() => setMode('scan')}>
+            <Text style={[styles.modeText, mode === 'scan' && styles.modeTextActive]}>Scan a recipe card</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <ScrollView contentContainerStyle={styles.formCard} keyboardShouldPersistTaps="handled">
-        {/* Wrap all form sections in a fragment to fix adjacent JSX error */}
-        <>
-        {/* --- Image Picker --- */}
-        {mode === 'manual' ? (
+        {(mode === 'manual' || isEdit) ? (
           <>
             <Text style={styles.sectionHeader}>Images</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-              {images.map((uri, idx) => (
-                <View key={idx} style={styles.imageThumbContainer}>
-                  <Image source={{ uri }} style={styles.imageThumb} />
-                  <TouchableOpacity
-                    style={styles.removeImageBtn}
-                    onPress={() => setImages(images.filter((_, i) => i !== idx))}
-                  >
-                    <Ionicons name="close-circle" size={22} color="#FF5C8A" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity style={styles.addImageBtn} onPress={pickImageFromLibrary}>
+            <DraggableFlatList
+              data={allImages}
+              horizontal
+              keyExtractor={(item, idx) => item + idx}
+              onDragEnd={({ data }) => setAllImages(data)}
+              activationDistance={8}
+              dragItemOverflow={true}
+              renderItem={({ item, drag, isActive, getIndex }) => {
+                const index = getIndex?.() ?? 0;
+                return (
+                  <View style={styles.imageThumbContainer}>
+                    <TouchableOpacity onLongPress={drag} activeOpacity={0.9}>
+                      <Image source={{ uri: item }} style={styles.imageThumb} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.removeImageBtn} onPress={() => handleRemoveImage(index)}>
+                      <Ionicons name="close-circle" size={22} color="#FF5C8A" />
+                    </TouchableOpacity>
+                    {index === 0 && (
+                      <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>Default</Text></View>
+                    )}
+                  </View>
+                );
+              }}
+              contentContainerStyle={styles.imageScroll}
+            />
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              <TouchableOpacity style={styles.addImageBtn} onPress={async () => {
+                let result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: false, quality: 0.8 })
+                if (!result.canceled && result.assets && result.assets.length > 0) {
+                  handleAddImages(result.assets.map(asset => asset.uri))
+                }
+              }}>
                 <Ionicons name="images" size={28} color="#FF5C8A" />
                 <Text style={styles.addImageText}>Gallery</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.addImageBtn} onPress={takePhoto}>
+              <TouchableOpacity style={styles.addImageBtn} onPress={async () => {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') { alert('Camera permission is required!'); return; }
+                let result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: false, quality: 0.8 })
+                if (!result.canceled && result.assets && result.assets.length > 0) {
+                  handleAddImages(result.assets.map(asset => asset.uri))
+                }
+              }}>
                 <Ionicons name="camera" size={28} color="#FF5C8A" />
                 <Text style={styles.addImageText}>Camera</Text>
               </TouchableOpacity>
-            </ScrollView>
+            </View>
+            <Text style={styles.sectionHeader}>Title</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Recipe Title"
+              value={form.title}
+              onChangeText={v => updateField('title', v)}
+              returnKeyType="next"
+            />
+            <Text style={styles.sectionHeader}>Ingredients</Text>
+            <View style={styles.chipRow}>
+              {form.ingredients.map((ing, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.chip}
+                  onPress={() => {
+                    setIngredientInput(ing)
+                    setEditingIngredientIdx(idx)
+                  }}
+                >
+                  <Text style={styles.chipText}>{ing}</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      removeArrayField('ingredients', idx)
+                      if (editingIngredientIdx === idx) {
+                        setEditingIngredientIdx(null)
+                        setIngredientInput('')
+                      }
+                    }}
+                    style={styles.chipDelete}
+                  >
+                    <Ionicons name="close" size={16} color="#FF5C8A" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.chipInputColumn}>
+              <TextInput
+                style={styles.chipInput}
+                placeholder="Add ingredient"
+                value={ingredientInput}
+                onChangeText={setIngredientInput}
+                onSubmitEditing={() => {
+                  if (ingredientInput.trim()) {
+                    if (editingIngredientIdx !== null) {
+                      updateArrayField('ingredients', editingIngredientIdx, ingredientInput.trim())
+                      setEditingIngredientIdx(null)
+                    } else {
+                      addArrayField('ingredients')
+                      updateArrayField('ingredients', form.ingredients.length, ingredientInput.trim())
+                    }
+                    setIngredientInput('')
+                    Keyboard.dismiss()
+                  }
+                }}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addActionBtn,
+                  !ingredientInput.trim() && styles.addActionBtnDisabled
+                ]}
+                onPress={() => {
+                  if (ingredientInput.trim()) {
+                    if (editingIngredientIdx !== null) {
+                      updateArrayField('ingredients', editingIngredientIdx, ingredientInput.trim())
+                      setEditingIngredientIdx(null)
+                    } else {
+                      addArrayField('ingredients')
+                      updateArrayField('ingredients', form.ingredients.length, ingredientInput.trim())
+                    }
+                    setIngredientInput('')
+                    Keyboard.dismiss()
+                  }
+                }}
+                disabled={!ingredientInput.trim()}
+                activeOpacity={ingredientInput.trim() ? 0.8 : 1}
+              >
+                <Ionicons
+                  name={editingIngredientIdx !== null ? 'pencil' : 'add-circle'}
+                  size={18}
+                  color="#fff"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.addActionBtnText}>
+                  {editingIngredientIdx !== null ? 'Save Change' : 'Add Ingredient'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.sectionHeader}>Steps</Text>
+            <DraggableFlatList
+              data={steps}
+              onDragEnd={({ data }) => {
+                setSteps(data)
+                setForm(f => ({ ...f, instructions: data.map(s => s.label) }))
+              }}
+              keyExtractor={item => item.key}
+              activationDistance={8}
+              renderItem={({ item, drag, isActive, getIndex }: { item: { key: string, label: string }, drag: any, isActive: boolean, getIndex?: () => number }) => {
+                const index = getIndex?.() ?? 0;
+                return (
+                  <View style={styles.stepCard}>
+                    <TouchableOpacity onLongPress={drag} style={styles.dragHandle}>
+                      <Ionicons name="reorder-three" size={22} color="#FF5C8A" />
+                    </TouchableOpacity>
+                    <View style={styles.stepNumberCircle}>
+                      <Text style={styles.stepNumberText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.stepCardText}>{item.label}</Text>
+                    <TouchableOpacity style={styles.chipDelete} onPress={() => {
+                      const newSteps = steps.filter((_, i) => i !== index)
+                      setSteps(newSteps)
+                      setForm(f => ({ ...f, instructions: newSteps.map(s => s.label) }))
+                    }}>
+                      <Ionicons name="close" size={16} color="#FF5C8A" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              }}
+              scrollEnabled={false}
+              containerStyle={{ marginBottom: 8 }}
+            />
+            <View style={styles.chipInputColumn}>
+              <TextInput
+                style={styles.chipInput}
+                placeholder="Add step"
+                value={stepInput}
+                onChangeText={setStepInput}
+                onSubmitEditing={handleStepAddOrEdit}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addActionBtn,
+                  !stepInput.trim() && styles.addActionBtnDisabled
+                ]}
+                onPress={handleStepAddOrEdit}
+                disabled={!stepInput.trim()}
+                activeOpacity={stepInput.trim() ? 0.8 : 1}
+              >
+                <Ionicons
+                  name={editingStepIdx !== null ? 'pencil' : 'add-circle'}
+                  size={18}
+                  color="#fff"
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={styles.addActionBtnText}>
+                  {editingStepIdx !== null ? 'Save Change' : 'Add Step'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.nutritionCard}>
+              <Text style={styles.sectionHeader}>Nutrition (optional)</Text>
+              {[
+                { key: 'calories', label: 'Calories', unit: 'kcal' },
+                { key: 'fat', label: 'Fat', unit: 'g' },
+                { key: 'cholesterol', label: 'Cholesterol', unit: 'mg' },
+                { key: 'sodium', label: 'Sodium', unit: 'mg' },
+                { key: 'carbs', label: 'Carbs', unit: 'g' },
+                { key: 'fiber', label: 'Fiber', unit: 'g' },
+                { key: 'sugar', label: 'Sugar', unit: 'g' },
+                { key: 'protein', label: 'Protein', unit: 'g' },
+              ].map(({ key, label, unit }) => (
+                <View key={key} style={styles.nutritionRow}>
+                  <Text style={styles.nutritionLabel}>{label}</Text>
+                  <View style={styles.nutritionInputRow}>
+                    <TextInput
+                      style={styles.nutritionInput}
+                      placeholder={unit}
+                      value={form.nutrition_info[key]}
+                      onChangeText={v => {
+                        const newInfo = { ...form.nutrition_info }
+                        newInfo[key] = v
+                        updateField('nutrition_info', newInfo)
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.sectionHeader}>Highlight</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="What makes this recipe special? (e.g. '5-min breakfast, kid-friendly, high-protein...')"
+              value={form.highlight}
+              onChangeText={v => updateField('highlight', v)}
+              multiline
+            />
+            <TouchableOpacity 
+              style={[styles.saveBtn, loading && styles.saveBtnDisabled]} 
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <View style={styles.saveBtnContent}>
+                  <ActivityIndicator color="#FFF" size="small" />
+                  <Text style={[styles.saveBtnText, { marginLeft: 8 }]}>
+                    {uploadProgress > 0 ? `Uploading... ${Math.round(uploadProgress * 100)}%` : 'Saving...'}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.saveBtnText}>{isEdit ? 'Update Recipe' : 'Save Recipe'}</Text>
+              )}
+            </TouchableOpacity>
           </>
         ) : (
           <>
@@ -319,203 +610,6 @@ export default function CreateRecipeScreen({ navigation }) {
             {loading && <ActivityIndicator size="large" color="#FF5C8A" style={{ marginVertical: 12 }} />}
           </>
         )}
-
-        {/* --- Title --- */}
-        <Text style={styles.sectionHeader}>Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Recipe Title"
-          value={form.title}
-          onChangeText={v => updateField('title', v)}
-          returnKeyType="next"
-        />
-
-        {/* --- Ingredients --- */}
-        <Text style={styles.sectionHeader}>Ingredients</Text>
-        <View style={styles.chipRow}>
-          {form.ingredients.map((ing, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.chip}
-              onPress={() => {
-                setIngredientInput(ing)
-                setEditingIngredientIdx(idx)
-              }}
-            >
-              <Text style={styles.chipText}>{ing}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  removeArrayField('ingredients', idx)
-                  if (editingIngredientIdx === idx) {
-                    setEditingIngredientIdx(null)
-                    setIngredientInput('')
-                  }
-                }}
-                style={styles.chipDelete}
-              >
-                <Ionicons name="close" size={16} color="#FF5C8A" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.chipInputColumn}>
-          <TextInput
-            style={styles.chipInput}
-            placeholder="Add ingredient"
-            value={ingredientInput}
-            onChangeText={setIngredientInput}
-            onSubmitEditing={() => {
-              if (ingredientInput.trim()) {
-                if (editingIngredientIdx !== null) {
-                  updateArrayField('ingredients', editingIngredientIdx, ingredientInput.trim())
-                  setEditingIngredientIdx(null)
-                } else {
-                  addArrayField('ingredients')
-                  updateArrayField('ingredients', form.ingredients.length, ingredientInput.trim())
-                }
-                setIngredientInput('')
-                Keyboard.dismiss()
-              }
-            }}
-            returnKeyType="done"
-          />
-          <TouchableOpacity
-            style={[
-              styles.addActionBtn,
-              !ingredientInput.trim() && styles.addActionBtnDisabled
-            ]}
-            onPress={() => {
-              if (ingredientInput.trim()) {
-                if (editingIngredientIdx !== null) {
-                  updateArrayField('ingredients', editingIngredientIdx, ingredientInput.trim())
-                  setEditingIngredientIdx(null)
-                } else {
-                  addArrayField('ingredients')
-                  updateArrayField('ingredients', form.ingredients.length, ingredientInput.trim())
-                }
-                setIngredientInput('')
-                Keyboard.dismiss()
-              }
-            }}
-            disabled={!ingredientInput.trim()}
-            activeOpacity={ingredientInput.trim() ? 0.8 : 1}
-          >
-            <Ionicons
-              name={editingIngredientIdx !== null ? 'pencil' : 'add-circle'}
-              size={18}
-              color="#fff"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.addActionBtnText}>
-              {editingIngredientIdx !== null ? 'Save Change' : 'Add Ingredient'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* --- Steps --- */}
-        <Text style={styles.sectionHeader}>Steps</Text>
-        <DraggableFlatList
-          data={steps}
-          onDragEnd={({ data }) => {
-            setSteps(data)
-            setForm(f => ({ ...f, instructions: data.map(s => s.label) }))
-          }}
-          keyExtractor={item => item.key}
-          renderItem={renderStepItem}
-          horizontal={false}
-          scrollEnabled={false}
-          style={{ marginBottom: 8 }}
-        />
-        <View style={styles.chipInputColumn}>
-          <TextInput
-            style={styles.chipInput}
-            placeholder="Add step"
-            value={stepInput}
-            onChangeText={setStepInput}
-            onSubmitEditing={handleStepAddOrEdit}
-            returnKeyType="done"
-          />
-          <TouchableOpacity
-            style={[
-              styles.addActionBtn,
-              !stepInput.trim() && styles.addActionBtnDisabled
-            ]}
-            onPress={handleStepAddOrEdit}
-            disabled={!stepInput.trim()}
-            activeOpacity={stepInput.trim() ? 0.8 : 1}
-          >
-            <Ionicons
-              name={editingStepIdx !== null ? 'pencil' : 'add-circle'}
-              size={18}
-              color="#fff"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.addActionBtnText}>
-              {editingStepIdx !== null ? 'Save Change' : 'Add Step'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* --- Nutrition Info --- */}
-        <View style={styles.nutritionCard}>
-          <Text style={styles.sectionHeader}>Nutrition (optional)</Text>
-          {[
-            { key: 'calories', label: 'Calories', unit: 'kcal' },
-            { key: 'fat', label: 'Fat', unit: 'g' },
-            { key: 'cholesterol', label: 'Cholesterol', unit: 'mg' },
-            { key: 'sodium', label: 'Sodium', unit: 'mg' },
-            { key: 'carbs', label: 'Carbs', unit: 'g' },
-            { key: 'fiber', label: 'Fiber', unit: 'g' },
-            { key: 'sugar', label: 'Sugar', unit: 'g' },
-            { key: 'protein', label: 'Protein', unit: 'g' },
-          ].map(({ key, label, unit }) => (
-            <View key={key} style={styles.nutritionRow}>
-              <Text style={styles.nutritionLabel}>{label}</Text>
-              <View style={styles.nutritionInputRow}>
-                <TextInput
-                  style={styles.nutritionInput}
-                  placeholder={unit}
-                  value={form.nutrition_info[key]}
-                  onChangeText={v => {
-                    const newInfo = { ...form.nutrition_info }
-                    newInfo[key] = v
-                    updateField('nutrition_info', newInfo)
-                  }}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* --- Highlight/Description Field --- */}
-        <Text style={styles.sectionHeader}>Highlight</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="What makes this recipe special? (e.g. '5-min breakfast, kid-friendly, high-protein...')"
-          value={form.highlight}
-          onChangeText={v => updateField('highlight', v)}
-          multiline
-        />
-
-        {/* --- Save Button --- */}
-        <TouchableOpacity 
-          style={[styles.saveBtn, loading && styles.saveBtnDisabled]} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <View style={styles.saveBtnContent}>
-              <ActivityIndicator color="#FFF" size="small" />
-              <Text style={[styles.saveBtnText, { marginLeft: 8 }]}>
-                {uploadProgress > 0 ? `Uploading... ${Math.round(uploadProgress * 100)}%` : 'Saving...'}
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.saveBtnText}>Save Recipe</Text>
-          )}
-        </TouchableOpacity>
-        </>
       </ScrollView>
     </SafeAreaView>
   )
@@ -753,5 +847,60 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: {
     opacity: 0.7,
+  },
+  editHeaderNoBg: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  editHeaderText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF5C8A',
+    marginLeft: 8,
+  },
+  cancelBtn: {
+    padding: 6,
+    borderRadius: 20,
+  },
+  defaultBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: '#FF5C8A',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    zIndex: 3,
+  },
+  defaultBadgeText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  stepCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFB6C133',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  dragHandle: {
+    marginRight: 10,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepCardText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 15,
+    marginLeft: 10,
   },
 })

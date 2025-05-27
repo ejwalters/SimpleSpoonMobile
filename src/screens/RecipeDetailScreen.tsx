@@ -161,6 +161,16 @@ export default function RecipeDetailScreen({ route, navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: isEditing ? 120 : 60 }}>
+          {isEditing && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, marginLeft: 8 }}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+                <Ionicons name="arrow-back" size={26} color="#FF5C8A" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 18, fontWeight: '700', marginLeft: 8 }}>
+                Edit Recipe
+              </Text>
+            </View>
+          )}
           <View style={styles.imageContainer}>
             {images.length > 0 ? (
               <Carousel
@@ -179,16 +189,19 @@ export default function RecipeDetailScreen({ route, navigation }) {
               <View style={[styles.image, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFE4EF' }]}> 
                 <Ionicons name="restaurant-outline" size={64} color="#FF5C8A" />
                 <Text style={styles.placeholderText}>
-                  {recipe.title?.split(' ').map(w => w[0]).join('').toUpperCase() || '��️'}
+                  {recipe.title?.split(' ').map(w => w[0]).join('').toUpperCase() || '🍽️'}
                 </Text>
               </View>
             )}
 
             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.35)']} style={styles.imageGradient} />
 
-            <View style={[styles.topButtons, { top: insets.top - 50 }]}> 
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={28} color="#FF5C8A" />
+            <View style={styles.topButtons}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={26} color="#FF5C8A" />
               </TouchableOpacity>
               {recipe.id && userId && (
                 <TouchableOpacity
@@ -221,6 +234,25 @@ export default function RecipeDetailScreen({ route, navigation }) {
               </ScrollView>
             </View>
           </View>
+
+          {isAISuggestion && !isOwner && (
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={async () => {
+                await handleSaveRecipe();
+                navigation.reset({
+                  index: 0,
+                  routes: [
+                    { name: 'MainTabs', params: { screen: 'MyRecipes', params: { reload: true } } }
+                  ]
+                });
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bookmark" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.saveButtonText}>Save to My Recipes</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.detailsSection}>
             <View style={styles.sectionCard}>
@@ -280,17 +312,18 @@ export default function RecipeDetailScreen({ route, navigation }) {
             </View>
           </View>
         </ScrollView>
-        {/* Floating Action Button for Edit */}
         {isOwner && !isEditing && (
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => navigation.navigate('CreateRecipe', { recipe, isEdit: true })}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="pencil" size={26} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.editRecipeBtnRow}>
+            <TouchableOpacity
+              style={styles.editRecipeBtn}
+              onPress={() => navigation.navigate('CreateRecipe', { recipe, isEdit: true })}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="pencil" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.editRecipeBtnText}>Edit Recipe</Text>
+            </TouchableOpacity>
+          </View>
         )}
-        {/* Save/Cancel Action Row at Bottom in Edit Mode */}
         {isEditing && (
           <View style={styles.editActionRow}>
             <TouchableOpacity
@@ -343,6 +376,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    top: 12,
     zIndex: 10,
   },
   backButton: {
@@ -425,7 +459,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 4,
-    elevation: 2
+    elevation: 2,
+    overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: 18,
@@ -446,12 +481,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333'
   },
-  stepBox: {},
+  stepBox: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
   step: {
     fontSize: 15,
     color: '#333',
     lineHeight: 22,
-    marginBottom: 10
+    marginBottom: 10,
+    backgroundColor: '#FFB6C133',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    overflow: 'hidden',
   },
   aiHelperText: {
     fontSize: 13,
@@ -518,6 +563,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 4,
+    marginTop: 12,
   },
   saveButtonText: {
     fontSize: 14,
@@ -708,5 +754,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 24,
     gap: 12,
+  },
+  editRecipeBtnRow: {
+    alignItems: 'center',
+    marginTop: -24,
+    marginBottom: 12,
+    zIndex: 10,
+  },
+  editRecipeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF5C8A',
+    borderRadius: 22,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  editRecipeBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 })
