@@ -19,128 +19,130 @@ export default function LoginScreen({ navigation }) {
   // Handles login using Supabase auth
   const handleLogin = async () => {
     const { error } = await supabase.auth.signIn({ email, password })
-
-    // Show alert if login fails
     if (error) Alert.alert('Login failed', error.message)
   }
 
   return (
-    // Avoids keyboard covering input fields on iOS
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Greeting section at top */}
-      <View style={styles.topSection}>
-        <Text style={styles.welcome}>👋 Welcome back</Text>
-        <Text style={styles.subtitle}>Let's get you cooking again.</Text>
+    <View style={styles.outerContainer}>
+      <View style={styles.greetingContainer}>
+        <Text style={styles.greeting}>Welcome Back 👋</Text>
+        <Text style={styles.greetingSubtitle}>Log in to continue your healthy journey</Text>
       </View>
-
-      {/* Card-like login form container */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Log In</Text>
-
-        {/* Email input */}
+      <View style={styles.loginCard}>
+        <Text style={styles.loginTitle}>Log In</Text>
         <TextInput
           placeholder="Email"
-          placeholderTextColor="#888"
+          placeholderTextColor="#B0B0B0"
           style={styles.input}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
-
-        {/* Password input */}
         <TextInput
           placeholder="Password"
-          placeholderTextColor="#888"
+          placeholderTextColor="#B0B0B0"
           style={styles.input}
           onChangeText={setPassword}
           secureTextEntry
         />
-
-        {/* Submit button */}
-        <Pressable style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>→ Enter</Text>
+        <Pressable style={styles.loginButton} onPress={handleLogin}>
+          <Text style={styles.loginButtonText}>Log In →</Text>
         </Pressable>
       </View>
-
-      {/* Link to signup screen */}
-      <Pressable onPress={() => navigation.navigate('Signup')}>
-        <Text style={styles.link}>
-          No account yet? <Text style={styles.linkAccent}>Create one →</Text>
+      <Pressable onPress={() => navigation.navigate('Signup')} style={styles.signupLinkContainer}>
+        <Text style={styles.signupLinkText}>
+          No account yet? <Text style={styles.signupLinkAccent}>Create one →</Text>
         </Text>
       </Pressable>
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
-// Style definitions for layout and UI
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     flex: 1,
-    backgroundColor: '#FFF5F7', // Soft, friendly pink background
-    justifyContent: 'flex-start',
-    padding: 24
+    backgroundColor: '#FAFAFA', // Even lighter background
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
-  topSection: {
-    marginTop: 60,
-    marginBottom: 40
+  greetingContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 32,
+    marginLeft: 8,
   },
-  welcome: {
+  greeting: {
     fontSize: 32,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 8
+    marginBottom: 4,
+    textAlign: 'left',
   },
-  subtitle: {
+  greetingSubtitle: {
     fontSize: 16,
-    color: '#666'
+    color: '#7B8D93',
+    fontWeight: '400',
+    textAlign: 'left',
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 24
+  loginCard: {
+    width: '100%',
+    maxWidth: 370,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    shadowColor: 'transparent', // Remove shadow
+    elevation: 0,
+    marginBottom: 32,
+    alignItems: 'stretch',
+    borderWidth: 1,
+    borderColor: '#F0F0F0', // Subtle border
   },
-  cardTitle: {
-    fontSize: 22,
+  loginTitle: {
+    fontSize: 20,
     fontWeight: '600',
-    marginBottom: 24,
-    color: '#1A1A1A'
+    color: '#1A1A1A',
+    marginBottom: 22,
+    textAlign: 'left',
   },
   input: {
-    backgroundColor: '#F3F3F3',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 18,
-    color: '#222'
+    color: '#222',
+    borderWidth: 1,
+    borderColor: '#E6E6E6',
+    shadowColor: 'transparent',
   },
-  button: {
+  loginButton: {
     backgroundColor: '#FF5C8A',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 8
+    marginTop: 8,
+    width: '100%',
   },
-  buttonText: {
+  loginButtonText: {
     color: '#FFF',
     fontSize: 18,
-    fontWeight: '600'
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  link: {
+  signupLinkContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  signupLinkText: {
     textAlign: 'center',
-    fontSize: 14,
-    color: '#666'
+    fontSize: 15,
+    color: '#B0B0B0',
+    fontWeight: '400',
   },
-  linkAccent: {
-    fontWeight: '600',
-    color: '#FF5C8A'
-  }
+  signupLinkAccent: {
+    fontWeight: '700',
+    color: '#FF5C8A',
+  },
 })

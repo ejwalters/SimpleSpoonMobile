@@ -8,7 +8,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  TextInput
+  TextInput,
+  Alert
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from 'react-native-vector-icons/Ionicons'
@@ -90,7 +91,9 @@ export default function RecipeDetailScreen({ route, navigation }) {
 
   const isOwner = recipe.user_id && userId && recipe.user_id === userId
   const isAISuggestion = !recipe.user_id
-
+  console.log('isOwner', isOwner)
+  console.log('isEditing', isEditing)
+  
   const handleSaveRecipe = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/save-recipe`, {
@@ -310,6 +313,56 @@ export default function RecipeDetailScreen({ route, navigation }) {
                 </View>
               )}
             </View>
+
+            {isOwner && !isEditing && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => {
+                  Alert.alert(
+                    'Delete Recipe',
+                    'Are you sure you want to delete this recipe?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Delete', 
+                        style: 'destructive', 
+                        onPress: async () => {
+                          try {
+                            const res = await fetch(`${API_BASE_URL}/delete-recipe`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: recipe.id })
+                            });
+                            let result;
+                            const contentType = res.headers.get('content-type');
+                            if (contentType && contentType.indexOf('application/json') !== -1) {
+                              result = await res.json();
+                            } else {
+                              throw new Error('Unexpected response from server.');
+                            }
+                            if (!res.ok || !result.success) throw new Error(result.error || 'Failed to delete recipe');
+                            alert('Recipe deleted!');
+                            navigation.reset({
+                              index: 0,
+                              routes: [
+                                { name: 'MainTabs', params: { screen: 'MyRecipes', params: { reload: true } } }
+                              ]
+                            });
+                          } catch (err) {
+                            alert('Delete failed: ' + (err.message || JSON.stringify(err)));
+                          }
+                        }
+                      },
+                    ],
+                    { cancelable: true }
+                  );
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="trash" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.deleteButtonText}>Delete Recipe</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
         {isOwner && !isEditing && (
@@ -776,6 +829,29 @@ const styles = StyleSheet.create({
   editRecipeBtnText: {
     color: '#fff',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF3B30',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    gap: 8,
+    width: '90%',
+    alignSelf: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 })

@@ -31,6 +31,9 @@
         "projectId": "db83be5c-2e72-4554-a4ae-8f22fa404647"
       }
     },
-    "jsEngine": "jsc"
+    "jsEngine": "jsc",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
